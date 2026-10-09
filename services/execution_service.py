@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 import time
 from datetime import datetime
 from core.database import get_session
@@ -53,7 +54,7 @@ def execute_script(script_id: int) -> dict:
             report_path = os.path.join(REPORTS_DIR, f"report_{run.id}.html")
             result = subprocess.run(
                 [
-                    "python", "-m", "pytest", script_path,
+                    sys.executable, "-m", "pytest", script_path,
                     "-v", "--tb=short",
                     f"--html={report_path}",
                     "--self-contained-html",
