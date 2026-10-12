@@ -2,6 +2,7 @@ import json
 from core.database import get_session
 from core.models import TestCase
 from chains.testcase_generator_chain import generate_test_cases
+from self_healing_engine.dom_analyzer import extract_locators_safe, summarize_dom_for_context
 
 
 def _coerce_str(val) -> str:
@@ -12,7 +13,15 @@ def _coerce_str(val) -> str:
 
 
 def create_test_cases_for_requirement(requirement: dict) -> list:
-    generated = generate_test_cases(requirement)
+    dom_summary = ""
+    try:
+        dom_context = extract_locators_safe()
+        hint = requirement.get("title", "") + " " + requirement.get("description", "")
+        dom_summary = summarize_dom_for_context(dom_context, hint)
+    except Exception:
+        pass  # Proceed without live DOM grounding rather than fail generation entirely.
+
+    generated = generate_test_cases(requirement, dom_context=dom_summary)
 
     db = get_session()
     try:

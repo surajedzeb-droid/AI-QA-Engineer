@@ -1,21 +1,14 @@
-import json
-import re
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from chains import get_llm
-
-
-def _extract_json(text: str):
-    text = text.strip()
-    text = re.sub(r"^```(?:json)?\s*", "", text)
-    text = re.sub(r"\s*```$", "", text)
-    return json.loads(text.strip())
+from shared.utils import extract_json as _extract_json
 
 
 def get_chain():
     prompt = ChatPromptTemplate.from_messages([
-        ("system", """You are a Playwright self-healing automation expert specialising in SauceDemo (https://www.saucedemo.com).
-A test locator has broken. Analyse the failure context and available DOM selectors, then suggest alternatives.
+        ("system", """You are a Playwright self-healing automation expert. A test locator has broken against the
+application under test (localhost or a live site — do not assume any specific product). Analyse the failure
+context and available DOM selectors, then suggest alternatives.
 
 Return ONLY valid JSON with these exact fields:
 - alternative_locators: list of selector strings ordered best-first (up to 5)

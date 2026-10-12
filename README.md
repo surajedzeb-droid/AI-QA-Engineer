@@ -82,7 +82,20 @@ GROQ_API_KEY=your_groq_api_key_here     # free at console.groq.com
 
 # AI_PROVIDER=ollama   (no key needed — requires Ollama running locally)
 
-# App login
+# Target application under test — point this at localhost or a live site.
+# Switch between environments by changing this value (no code changes needed).
+BASE_URL=http://localhost:3000
+# BASE_URL=https://your-live-site.example.com
+
+# Target app login (leave blank if the app needs no login)
+LOGIN_USERNAME=
+LOGIN_PASSWORD=
+LOGIN_USERNAME_SELECTOR=input[name="username"]
+LOGIN_PASSWORD_SELECTOR=input[name="password"]
+LOGIN_SUBMIT_SELECTOR=button[type="submit"]
+LOGIN_SUCCESS_URL_PATTERN=
+
+# App login (to this Streamlit platform, not the target app)
 PLATFORM_USERNAME=admin
 PLATFORM_PASSWORD=your-strong-password
 
@@ -91,6 +104,19 @@ HEADLESS_BROWSER=false
 ```
 
 Only the selected provider's API key is required. See `.env.example` for all options.
+
+### Testing your own product
+
+This platform no longer assumes any specific target app. Set `BASE_URL` to your product — a `localhost` dev
+server or a live site — and generated tests will navigate there via the `base_url`/`page`/`logged_in_page`
+fixtures in `generated_tests/conftest.py`. If your app requires login, set `LOGIN_USERNAME`/`LOGIN_PASSWORD`
+and (if your login form differs from the defaults) the `LOGIN_*_SELECTOR` fields. You can switch between
+localhost and a live site at any time just by changing `BASE_URL` and re-running — no restart required beyond
+re-running the pipeline/tests, since `execution_service.py` re-reads `.env` at execution time.
+
+SauceDemo examples (the "Seed Example Requirements" button, the Jira-simulation demo stories) are still bundled
+as a working demo — they're optional and don't affect testing your own product via the Manual Text / File Upload
+requirement inputs.
 
 ---
 
@@ -216,7 +242,11 @@ Stored at `data/qa_platform.db` (SQLite, git-ignored).
 
 ## Target Application
 
-Tests are generated and executed against [SauceDemo](https://www.saucedemo.com) — a publicly available e-commerce demo app purpose-built for automation practice.
+The target app under test is configurable — set `BASE_URL` in `.env` to point at a localhost dev server or a
+live site (see [Testing your own product](#testing-your-own-product) above). Out of the box it defaults to
+`http://localhost:3000`; the bundled example requirements/demo data reference [SauceDemo](https://www.saucedemo.com),
+a publicly available e-commerce demo app, purely as a working demo you can try before pointing the platform at
+your own product.
 
 ---
 

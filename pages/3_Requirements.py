@@ -44,7 +44,7 @@ with tab_text:
     with col2:
         st.markdown("&nbsp;")
         parse_btn = st.button("Parse with AI", type="primary", use_container_width=True)
-        seed_btn = st.button("Seed SauceDemo Defaults", use_container_width=True)
+        seed_btn = st.button("Seed Example Requirements (SauceDemo demo)", use_container_width=True)
 
     if parse_btn:
         if not user_input.strip():
@@ -60,7 +60,7 @@ with tab_text:
                         st.code(traceback.format_exc())
 
     if seed_btn:
-        with st.spinner("Seeding default SauceDemo requirements..."):
+        with st.spinner("Seeding example SauceDemo requirements..."):
             try:
                 seeded = seed_default_requirements()
                 st.success(f"Seeded {len(seeded)} default requirement(s)!")
@@ -100,7 +100,7 @@ with tab_file:
                         st.warning(f"{len(errors)} line(s) failed to parse.")
 
 with tab_jira:
-    st.markdown("Simulate loading requirements from a Jira project sprint.")
+    st.markdown("Simulate loading requirements from a Jira project sprint (built-in demo data — your own Jira stories can be pasted via the Manual Text tab).")
 
     from requirement_parser.jira_loader import JiraLoader
     loader = JiraLoader()
@@ -138,7 +138,7 @@ reqs = get_all_requirements()
 st.subheader(f"All Requirements ({len(reqs)})")
 
 if not reqs:
-    st.info("No requirements yet. Use one of the input modes above or click 'Seed SauceDemo Defaults'.")
+    st.info("No requirements yet. Enter your own requirements above (Manual Text / File Upload), or click 'Seed Example Requirements' to try a SauceDemo demo set.")
 else:
     feature_filter = st.selectbox(
         "Filter by Feature",

@@ -10,6 +10,7 @@ def get_llm():
             model="openai/gpt-oss-120b",
             temperature=0,
             api_key=settings.GROQ_API_KEY,
+            max_tokens=8000,
         )
     elif provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
@@ -17,6 +18,7 @@ def get_llm():
             model=settings.CLAUDE_MODEL,
             temperature=0,
             api_key=settings.ANTHROPIC_API_KEY,
+            max_tokens=8000,
         )
     elif provider == "google":
         from langchain_google_genai import ChatGoogleGenerativeAI
@@ -24,9 +26,18 @@ def get_llm():
             model="gemini-1.5-flash",
             temperature=0,
             google_api_key=settings.GOOGLE_API_KEY,
+            max_output_tokens=8000,
         )
     elif provider == "ollama":
         from langchain_ollama import ChatOllama
-        return ChatOllama(model="llama3.1", temperature=0)
+        return ChatOllama(model="llama3.1", temperature=0, num_predict=8000)
+    elif provider == "openai":
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(
+            model=settings.OPENAI_MODEL,
+            temperature=0,
+            api_key=settings.OPENAI_API_KEY,
+            max_tokens=8000,
+        )
     else:
-        raise ValueError(f"Unsupported AI_PROVIDER: {provider}. Choose: groq, anthropic, google, ollama")
+        raise ValueError(f"Unsupported AI_PROVIDER: {provider}. Choose: groq, anthropic, google, ollama, openai")

@@ -1,27 +1,47 @@
-"""Extracts interactive element selectors from SauceDemo using Playwright."""
+"""Extracts interactive element selectors from the target app under test using Playwright."""
 from __future__ import annotations
 
 
 class DOMAnalyzer:
-    BASE_URL = "https://www.saucedemo.com"
-
     def extract_locators(
         self,
-        url: str = BASE_URL,
-        username: str = "standard_user",
-        password: str = "secret_sauce",
+        url: str | None = None,
+        username: str | None = None,
+        password: str | None = None,
+        username_selector: str | None = None,
+        password_selector: str | None = None,
+        submit_selector: str | None = None,
     ) -> dict[str, list[str]]:
-        """Browse SauceDemo and return selectors for all interactive elements.
+        """Browse the configured target app (BASE_URL) and return selectors for all interactive elements.
 
         Returns a dict: {element_description: [selector_candidates]}.
-        Falls back to a static registry if Playwright is unavailable.
+        Falls back to a static registry if Playwright is unavailable or the app can't be reached.
         """
+        from core.config import settings
+
+        url = url or settings.BASE_URL
+        username = username if username is not None else settings.LOGIN_USERNAME
+        password = password if password is not None else settings.LOGIN_PASSWORD
+        username_selector = username_selector or settings.LOGIN_USERNAME_SELECTOR
+        password_selector = password_selector or settings.LOGIN_PASSWORD_SELECTOR
+        submit_selector = submit_selector or settings.LOGIN_SUBMIT_SELECTOR
+
         try:
-            return self._dynamic_extract(url, username, password)
+            return self._dynamic_extract(
+                url, username, password, username_selector, password_selector, submit_selector
+            )
         except Exception:
             return self._static_fallback()
 
-    def _dynamic_extract(self, url: str, username: str, password: str) -> dict[str, list[str]]:
+    def _dynamic_extract(
+        self,
+        url: str,
+        username: str,
+        password: str,
+        username_selector: str,
+        password_selector: str,
+        submit_selector: str,
+    ) -> dict[str, list[str]]:
         from playwright.sync_api import sync_playwright
 
         result: dict[str, list[str]] = {}
@@ -30,22 +50,21 @@ class DOMAnalyzer:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
 
-            # --- Login page ---
+            # --- Initial page ---
             page.goto(url)
             page.wait_for_load_state("networkidle")
-            result.update(self._collect_elements(page, "login"))
+            result.update(self._collect_elements(page, "initial"))
 
-            # --- Inventory page ---
-            page.fill("[data-test='username']", username)
-            page.fill("[data-test='password']", password)
-            page.click("[data-test='login-button']")
-            page.wait_for_url("**/inventory.html")
-            result.update(self._collect_elements(page, "inventory"))
-
-            # --- Cart page ---
-            page.click(".shopping_cart_link")
-            page.wait_for_url("**/cart.html")
-            result.update(self._collect_elements(page, "cart"))
+            # --- Post-login page (only if credentials are configured) ---
+            if username and password:
+                try:
+                    page.fill(username_selector, username)
+                    page.fill(password_selector, password)
+                    page.click(submit_selector)
+                    page.wait_for_load_state("networkidle")
+                    result.update(self._collect_elements(page, "after_login"))
+                except Exception:
+                    pass
 
             browser.close()
 
@@ -82,24 +101,73 @@ class DOMAnalyzer:
         return selectors
 
     def _static_fallback(self) -> dict[str, list[str]]:
-        """Return a curated static selector registry when live extraction fails."""
+        """Return generic common-pattern selector guesses when live extraction fails
+        (e.g. the target app under test couldn't be reached)."""
         return {
-            "login_username": ["[data-test='username']", "#user-name"],
-            "login_password": ["[data-test='password']", "#password"],
-            "login_button": ["[data-test='login-button']", "#login-button"],
-            "login_error": ["[data-test='error']", ".error-message-container h3"],
-            "inventory_list": [".inventory_list", "#inventory_container"],
-            "add_to_cart": ["[data-test^='add-to-cart']", ".btn_inventory"],
-            "cart_badge": [".shopping_cart_badge"],
-            "cart_link": [".shopping_cart_link", "a.shopping_cart_link"],
-            "checkout_btn": ["[data-test='checkout']", "#checkout"],
-            "first_name": ["[data-test='firstName']", "#first-name"],
-            "last_name": ["[data-test='lastName']", "#last-name"],
-            "zip": ["[data-test='postalCode']", "#postal-code"],
-            "continue_btn": ["[data-test='continue']", "#continue"],
-            "finish_btn": ["[data-test='finish']", "#finish"],
-            "order_confirm": [".complete-header", "h2.complete-header"],
-            "sort_dropdown": ["[data-test='product_sort_container']", ".product_sort_container"],
-            "hamburger": ["#react-burger-menu-btn", "button.bm-burger-button"],
-            "logout": ["#logout_sidebar_link", "a#logout_sidebar_link"],
+            "login_username": ["input[name='username']", "input[type='email']", "#username"],
+            "login_password": ["input[name='password']", "input[type='password']", "#password"],
+            "login_button": ["button[type='submit']", "button:has-text('Log in')", "button:has-text('Sign in')"],
+            "login_error": [".error-message", "[role='alert']", ".error"],
+            "nav_menu": ["nav", "[role='navigation']"],
+            "logout": ["a:has-text('Logout')", "button:has-text('Logout')", "#logout"],
         }
+
+
+def extract_locators_safe() -> dict[str, list[str]]:
+    """Run DOMAnalyzer().extract_locators() in a separate process.
+
+    Streamlit runs on Tornado, which forces asyncio's SelectorEventLoop policy on Windows, but Playwright's
+    sync API needs ProactorEventLoop to spawn its browser subprocess — calling it in-process from a
+    Streamlit page would silently fall back to the generic static registry instead of real DOM data.
+    A fresh subprocess starts with the default (Proactor) policy, avoiding that.
+    """
+    import json
+    import os
+    import subprocess
+    import sys
+
+    project_root = os.path.dirname(os.path.dirname(__file__))
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "self_healing_engine.dom_analyzer"],
+            capture_output=True,
+            text=True,
+            timeout=90,
+            cwd=project_root,
+        )
+        if result.returncode != 0:
+            return DOMAnalyzer()._static_fallback()
+        return json.loads(result.stdout.strip().splitlines()[-1])
+    except Exception:
+        return DOMAnalyzer()._static_fallback()
+
+
+def summarize_dom_for_context(dom_context: dict, hint_text: str, max_chars: int = 3000) -> str:
+    """Rank dom_context entries by relevance to hint_text (a broken locator, or a test
+    name + script content) and return a JSON summary truncated to max_chars.
+
+    On a large page the DOM dump can have hundreds of entries — blind truncation in
+    dict-iteration order means the one real selector/heading/text an LLM actually needs
+    may never survive the character budget. Ranking by keyword overlap first fixes that.
+    """
+    import json
+    import re
+
+    # Split camelCase before lowercasing (e.g. "callbackModal" -> "callback modal")
+    # so keyword matching works word-by-word instead of as one unmatchable blob.
+    spaced = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", hint_text)
+    keywords = set(w for w in re.findall(r"[a-z]+", spaced.lower()) if len(w) > 2)
+
+    def relevance(item: tuple[str, list]) -> int:
+        key, candidates = item
+        text = (key + " " + " ".join(candidates)).lower()
+        return sum(1 for kw in keywords if kw in text)
+
+    ranked = sorted(dom_context.items(), key=relevance, reverse=True)
+    return json.dumps(dict(ranked), indent=2)[:max_chars]
+
+
+if __name__ == "__main__":
+    import json
+
+    print(json.dumps(DOMAnalyzer().extract_locators()))

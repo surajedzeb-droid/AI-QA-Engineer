@@ -3,13 +3,23 @@ from core.database import get_session
 from core.models import Script
 from core.security import validate_script_path, validate_generated_script
 from chains.script_generator_chain import generate_script
+from self_healing_engine.dom_analyzer import extract_locators_safe, summarize_dom_for_context
 
 GENERATED_TESTS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "generated_tests")
 
 
 def create_script_for_test_case(requirement: dict, test_case: dict) -> dict:
     tc_with_feature = {**test_case, "feature": requirement.get("feature", "")}
-    content = generate_script(tc_with_feature)
+
+    dom_summary = ""
+    try:
+        dom_context = extract_locators_safe()
+        hint = test_case.get("title", "") + " " + test_case.get("steps", "") + " " + test_case.get("test_data", "")
+        dom_summary = summarize_dom_for_context(dom_context, hint)
+    except Exception:
+        pass  # Proceed without live DOM grounding rather than fail generation entirely.
+
+    content = generate_script(tc_with_feature, dom_context=dom_summary)
 
     if not validate_generated_script(content):
         raise ValueError("Generated script failed validation: must start with import/from statement")

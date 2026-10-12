@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import List
 
 JIRA_STORIES: dict[str, List[dict]] = {
-    "SauceDemo Sprint 1": [
+    "Demo: SauceDemo Sprint 1": [
         {
             "title": "Valid Login with Standard User",
             "description": "A standard user can log in with correct credentials and be redirected to the products page.",
@@ -85,7 +85,7 @@ JIRA_STORIES: dict[str, List[dict]] = {
             "test_types": "Functional,Security",
         },
     ],
-    "SauceDemo Sprint 2": [
+    "Demo: SauceDemo Sprint 2": [
         {
             "title": "Product Detail Page Loads Correctly",
             "description": "Clicking a product name opens the detail page with description and price.",

@@ -21,7 +21,7 @@ init_db()
 def login_page():
     st.title("AI Quality Engineering Platform")
     st.markdown("**Powered by LangChain + Playwright + Streamlit**")
-    st.markdown("Target Application: [SauceDemo](https://www.saucedemo.com)")
+    st.markdown(f"Target Application: `{settings.BASE_URL}` _(set `BASE_URL` in .env to point at localhost or a live site)_")
     st.divider()
 
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -49,6 +49,7 @@ def main():
     with st.sidebar:
         st.markdown(f"Logged in as **{st.session_state.get('username', 'admin')}**")
         st.caption(f"AI Provider: `{settings.AI_PROVIDER}`")
+        st.caption(f"Target App: `{settings.BASE_URL}`")
         if st.button("Logout"):
             st.session_state.clear()
             st.rerun()

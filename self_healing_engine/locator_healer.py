@@ -1,6 +1,6 @@
 """Uses the self_healing_chain to suggest replacement locators."""
-import json
 from chains.self_healing_chain import suggest_alternative_locators
+from self_healing_engine.dom_analyzer import summarize_dom_for_context
 
 
 class LocatorHealer:
@@ -14,7 +14,7 @@ class LocatorHealer:
         Returns:
           {original, alternatives, confidence, strategy, explanation}
         """
-        dom_summary = json.dumps(dom_context, indent=2)[:3000]
+        dom_summary = summarize_dom_for_context(dom_context, broken_locator)
         result = suggest_alternative_locators(
             broken_locator=broken_locator,
             failure_message=failure_output,

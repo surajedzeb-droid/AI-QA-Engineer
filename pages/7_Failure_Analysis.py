@@ -5,6 +5,7 @@ from core.models import Analysis
 from services.execution_service import get_all_runs, get_run_by_id
 from services.script_service import get_script_by_id
 from chains.failure_analyzer_chain import analyze_failure
+from self_healing_engine.dom_analyzer import extract_locators_safe, summarize_dom_for_context
 
 init_db()
 
@@ -36,10 +37,20 @@ else:
 
         with st.spinner("Analyzing failure with AI..."):
             try:
+                dom_context_summary = ""
+                try:
+                    dom_context = extract_locators_safe()
+                    dom_context_summary = summarize_dom_for_context(
+                        dom_context, selected_run["test_name"] + " " + script_content[:1000]
+                    )
+                except Exception:
+                    pass  # Proceed without live DOM grounding rather than fail the whole analysis.
+
                 result = analyze_failure(
                     test_name=selected_run["test_name"],
                     failure_output=failure_output,
                     script_content=script_content,
+                    dom_context=dom_context_summary,
                 )
 
                 db = get_session()

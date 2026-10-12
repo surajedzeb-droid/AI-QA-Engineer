@@ -15,7 +15,7 @@ if not st.session_state.get("authenticated"):
     st.stop()
 
 st.title("Dashboard")
-st.markdown("AI Quality Engineering Platform — SauceDemo Test Coverage")
+st.markdown("AI Quality Engineering Platform — Test Coverage")
 
 reqs = get_all_requirements()
 tcs = get_all_test_cases()

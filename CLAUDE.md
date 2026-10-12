@@ -39,11 +39,14 @@ pytest generated_tests/ -v --json-report --json-report-file=reports/test_results
 ```bash
 cp .env.example .env
 # Set GROQ_API_KEY (free at console.groq.com) and optionally PLATFORM_PASSWORD
+# Set BASE_URL to the app under test (localhost dev server or a live site) and,
+# if it requires login, LOGIN_USERNAME/LOGIN_PASSWORD (+ LOGIN_*_SELECTOR if your
+# login form isn't input[name="username"/"password"] + button[type="submit"]).
 ```
 
 ## Architecture
 
-This is a monolithic Streamlit app (single `streamlit run app.py`) that implements an end-to-end AI-powered QA pipeline targeting [SauceDemo](https://www.saucedemo.com).
+This is a monolithic Streamlit app (single `streamlit run app.py`) that implements an end-to-end AI-powered QA pipeline. The target app under test is configurable via `BASE_URL` in `.env` (point it at a localhost dev server or a live site, default `http://localhost:3000`) — the UI also ships with [SauceDemo](https://www.saucedemo.com) example requirements/data for demo purposes.
 
 ### Data flow
 
@@ -67,7 +70,7 @@ The full pipeline: **Requirements → Test Cases → Playwright Scripts → Exec
 
 ### AI providers
 
-Configured via `AI_PROVIDER` in `.env`. Supported values: `groq` (default, Llama 3.3 70B), `anthropic` (Claude), `google` (Gemini), `ollama` (local). Only the selected provider's package needs an API key.
+Configured via `AI_PROVIDER` in `.env`. Supported values: `groq` (default, Llama 3.3 70B), `anthropic` (Claude), `google` (Gemini), `ollama` (local), `openai` (GPT, default model `gpt-4o-mini` via `OPENAI_MODEL`). Only the selected provider's package needs an API key.
 
 ### Security constraints
 
